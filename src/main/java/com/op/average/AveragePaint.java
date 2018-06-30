@@ -10,25 +10,23 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class HexPaint extends Base {
+public class AveragePaint extends Base {
 
-    private static HexPaint hexPaint = new HexPaint();
+    private static AveragePaint averagePaint = new AveragePaint();
 
-    private String dir = host+"";
+    private String dir = host + "";
     private String ipFile = "Virga";
-    private String opFile = "Out";
+    private String opFilePre = "Out";
     private int w = 0;
     private int h = 0;
-    private static final int TYPE_CIRCLE = 0;
-    private static final int TYPE_RECT = 1;
-    private static final int TYPE_HEART = 2;
-    private static final int TYPE_SCRIBBLE = 3;
-    private int type = TYPE_RECT;
+    private Type type = Type.HEART;
+    private String opFile = opFilePre + type.name();
 
     private double scale = 12;
     private int radStart = 0;
     private double radMin = 0;
     private double lowThreshold = 500.0;
+    private boolean addBorder = false;
     private BufferedImage obi;
     private Graphics2D opG;
 
@@ -40,11 +38,11 @@ public class HexPaint extends Base {
      * @throws IOException
      */
     public static void main(String[] args) throws IOException {
-        hexPaint.readImage();
+        averagePaint.draw();
 
     }
 
-    public void readImage() throws IOException {
+    public void draw() throws IOException {
         File ip = new File(dir + ipFile + ".jpg");
         BufferedImage bi = ImageIO.read(ip);
         w = bi.getWidth();
@@ -62,7 +60,7 @@ public class HexPaint extends Base {
 
         paintVariance(bi, 0, 0, w, h, radStart);
 
-        if (type == TYPE_SCRIBBLE) {
+        if (type == Type.SCRIB) {
             drawScibble();
         }
         // paintAllHex(bi);
@@ -77,9 +75,11 @@ public class HexPaint extends Base {
         for (Circle c : circles) {
             drawCirclesPath((int) c.x, (int) c.y, (int) c.rad, c.c);
         }
-        opG.setColor(Color.BLACK);
-        opG.setStroke(new BasicStroke(5));
-        opG.draw(path);
+        if (addBorder) {
+            opG.setColor(Color.BLACK);
+            opG.setStroke(new BasicStroke(5));
+            opG.draw(path);
+        }
     }
 
     private void paintAllHex(BufferedImage bi) {
@@ -179,29 +179,33 @@ public class HexPaint extends Base {
         int b = (int) meanValue(sub, 2);
         Color c = new Color(r, g, b);
         opG.setColor(c);
-        if (type == TYPE_SCRIBBLE) {
+        if (type == Type.SCRIB) {
             setScribble(x, y, rrad, c);
-        } else if (type == TYPE_CIRCLE) {
+        } else if (type == Type.CIRCLE) {
             drawCircle(x, y, rrad, c);
-        } else if (type == TYPE_RECT) {
+        } else if (type == Type.RECT) {
             opG.setColor(getAlphaColor(c, 225));
             int border = rrad / 5;
             opG.fillRoundRect(x + border, y + border, 2 * (rrad - border),
                     2 * (rrad - border), border * 4, border * 4);
 
-            opG.setStroke(new BasicStroke(rrad / 20));
-            opG.setColor(c);
-            opG.drawRoundRect(x + border, y + border, 2 * (rrad - border),
-                    2 * (rrad - border), border * 4, border * 4);
-        } else if (type == TYPE_HEART) {
+            if (addBorder) {
+                opG.setStroke(new BasicStroke(rrad / 20));
+                opG.setColor(c);
+                opG.drawRoundRect(x + border, y + border, 2 * (rrad - border),
+                        2 * (rrad - border), border * 4, border * 4);
+            }
+        } else if (type == Type.HEART) {
             int size = 9 * rrad / 10;
             int off = 1 * rrad / 10;
             Shape heart = new HeartShape().getShape(size, off, x, y);
             opG.setColor(getAlphaColor(c, 200));
             opG.fill(heart);
-            opG.setStroke(new BasicStroke(rrad / 20));
-            opG.setColor(c);
-            opG.draw(heart);
+            if (addBorder) {
+                opG.setStroke(new BasicStroke(rrad / 20));
+                opG.setColor(c);
+                opG.draw(heart);
+            }
         }
     }
 
@@ -246,9 +250,11 @@ public class HexPaint extends Base {
     private void drawCircle(int x, int y, int rrad, Color c) {
         opG.setColor(getAlphaColor(c, 225));
         opG.fillOval(x, y, 2 * rrad, 2 * rrad);
-        opG.setStroke(new BasicStroke(rrad / 20));
-        opG.setColor(c);
-        opG.drawOval(x, y, 2 * rrad, 2 * rrad);
+        if (addBorder) {
+            opG.setStroke(new BasicStroke(rrad / 20));
+            opG.setColor(c);
+            opG.drawOval(x, y, 2 * rrad, 2 * rrad);
+        }
     }
 
     private Color getAlphaColor(Color orig, int alpha) {
@@ -447,6 +453,19 @@ public class HexPaint extends Base {
                                   double arg3) {
             // TODO Auto-generated method stub
             return false;
+        }
+    }
+
+    public enum Type {
+        CIRCLE("CIR"),
+        RECT("RECT"),
+        HEART("HEART"),
+        SCRIB("SCRIB");
+
+        final String name;
+
+        Type(String name) {
+            this.name = name;
         }
     }
 }
