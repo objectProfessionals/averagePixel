@@ -1,6 +1,9 @@
 package main.java.com.op.average;
 
 
+import main.java.com.op.Base;
+import main.java.com.op.HeartShape;
+
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.geom.*;
@@ -19,19 +22,20 @@ public class AveragePaint extends Base {
     private String opFilePre = "Out";
     private int w = 0;
     private int h = 0;
-    private Type type = Type.HEART;
+    private Type type = Type.LINE;
     private String opFile = opFilePre + type.name();
 
     private double scale = 12;
     private int radStart = 0;
     private double radMin = 0;
-    private double lowThreshold = 500.0;
+    private double lowThreshold = 30.0;//300
     private boolean addBorder = false;
     private BufferedImage obi;
     private Graphics2D opG;
 
     private Path2D.Double path = new Path2D.Double();
     private ArrayList<Circle> circles = new ArrayList<Circle>();
+    private int varianceF = 2; // 2
 
     /**
      * @param args
@@ -58,12 +62,15 @@ public class AveragePaint extends Base {
         radStart = (int) (((double) w) / scale);
         radMin = radStart / scale;
 
-        paintVariance(bi, 0, 0, w, h, radStart);
+        if (type == Type.HEX) {
+            paintAllHex(bi);
+        } else {
+            paintVariance(bi, 0, 0, w, h, radStart);
+        }
 
         if (type == Type.SCRIB) {
             drawScibble();
         }
-        // paintAllHex(bi);
 
         save();
     }
@@ -73,7 +80,7 @@ public class AveragePaint extends Base {
         Circle c1 = circles.get(0);
         path.moveTo(c1.x, c1.y);
         for (Circle c : circles) {
-            drawCirclesPath((int) c.x, (int) c.y, (int) c.rad, c.c);
+            drawCurveToPath((int) c.x, (int) c.y, (int) c.rad, c.c);
         }
         if (addBorder) {
             opG.setColor(Color.BLACK);
@@ -156,17 +163,17 @@ public class AveragePaint extends Base {
     private void paintOne(BufferedImage bi, int rad, int x, int y) {
         double var = getSD(bi, x, y, rad);
         if (var < lowThreshold) {
-            paintCircle(bi, x, y, rad);
+            paintOneType(bi, x, y, rad);
         } else {
             if (rad > radMin) {
-                paintVariance(bi, x, y, rad * 2, rad * 2, rad / 2);
+                paintVariance(bi, x, y, rad * 2, rad * 2, rad / varianceF);
             } else {
-                paintCircle(bi, x, y, rad);
+                paintOneType(bi, x, y, rad);
             }
         }
     }
 
-    private void paintCircle(BufferedImage bi, int x, int y, int rrad) {
+    private void paintOneType(BufferedImage bi, int x, int y, int rrad) {
         int dia = rrad * 2;
         System.out.println("x,y,r=" + x + "," + y + "," + rrad);
 
@@ -183,6 +190,8 @@ public class AveragePaint extends Base {
             setScribble(x, y, rrad, c);
         } else if (type == Type.CIRCLE) {
             drawCircle(x, y, rrad, c);
+        } else if (type == Type.LINE) {
+            drawLine(x, y, rrad, c);
         } else if (type == Type.RECT) {
             opG.setColor(getAlphaColor(c, 225));
             int border = rrad / 5;
@@ -210,11 +219,11 @@ public class AveragePaint extends Base {
     }
 
     private void setScribble(int x, int y, double rad, Color c) {
-        Circle cir = new Circle(x, y, rad, c);
+        Circle cir = new Circle(circles.size(), x, y, rad, c);
         circles.add(cir);
     }
 
-    private void drawCirclesPath(int x, int y, double rad, Color c) {
+    private void drawCurveToPath(int x, int y, double rad, Color c) {
         double rrad = 2 * rad * 1;
         double x1 = (x);
         double y1 = (y);
@@ -234,12 +243,14 @@ public class AveragePaint extends Base {
 
         int grey = 255 - (c.getRed() + c.getGreen() + c.getBlue()) / 3;
         grey = grey / 50;
+        //double variationsF = 4.0;
+        double variationsF = (rad/radMin)/3;
         for (int i = 0; i < grey; i++) {
-            int r1 = (int) (Math.random() * 4.0);
+            int r1 = (int) (Math.random() * variationsF);
             double[] coord1 = coords[r1];
-            int r2 = (int) (Math.random() * 4.0);
+            int r2 = (int) (Math.random() * variationsF);
             double[] coord2 = coords[r2];
-            int r3 = (int) (Math.random() * 4.0);
+            int r3 = (int) (Math.random() * variationsF);
             double[] coord3 = coords[r3];
             path.curveTo(coord1[0], coord1[1], coord2[0], coord2[1], coord3[0],
                     coord3[1]);
@@ -250,11 +261,32 @@ public class AveragePaint extends Base {
     private void drawCircle(int x, int y, int rrad, Color c) {
         opG.setColor(getAlphaColor(c, 225));
         opG.fillOval(x, y, 2 * rrad, 2 * rrad);
+
         if (addBorder) {
             opG.setStroke(new BasicStroke(rrad / 20));
             opG.setColor(c);
             opG.drawOval(x, y, 2 * rrad, 2 * rrad);
         }
+    }
+
+    private void drawLine(int x, int y, int rrad, Color c) {
+        opG.setColor(Color.BLACK);
+        //opG.setColor(getAlphaColor(c, 225));
+        double r = rrad;
+        Path2D p = new Path2D.Double();
+        p.moveTo(r, r*2);
+        p.lineTo(r, 0);
+        AffineTransform tr = new AffineTransform();
+        AffineTransform mv = AffineTransform.getTranslateInstance(x, y);
+        double f = ((c.getRed() + c.getBlue() + c.getGreen())/3.0)/255.0;
+        AffineTransform ro = AffineTransform.getRotateInstance(Math.PI * f, r, r);
+        tr.concatenate(mv);
+        tr.concatenate(ro);
+        p.transform(tr);
+        //opG.clip(new Ellipse2D.Double(x, y, 2 * rrad, 2 * rrad));
+        opG.setStroke(new BasicStroke(5));
+        //System.out.println("M"+p.);
+        opG.draw(p);
     }
 
     private Color getAlphaColor(Color orig, int alpha) {
@@ -269,59 +301,6 @@ public class AveragePaint extends Base {
         System.out.println("Saved " + op1.getPath());
     }
 
-    private double getSD(BufferedImage bi, int x, int y, int rad) {
-        // HexShape hex = new HexShape(rad, rad, rad);
-        int dia = rad * 2;
-        if (x + dia >= bi.getWidth() || y + dia >= bi.getHeight() || dia <= 0) {
-            return 255;
-        }
-        BufferedImage sub = bi.getSubimage(x, y, dia, dia);
-        // double varRed = getVariance(sub, 0);
-        // double varGreen = getVariance(sub, 1);
-        // double varBlue = getVariance(sub, 2);
-        // System.out.println("x,y=" + x + "," + y + " rgb=" + varRed + ":"
-        // + varGreen + ":" + varBlue);
-        double varGrey = getVariance(sub, 4);
-        return varGrey;
-    }
-
-    public double getVariance(BufferedImage image, int ind) {
-        double mean = meanValue(image, ind);
-        double sumOfDiff = 0.0;
-
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) {
-                int[] arr = getRGBAG(image, x, y);
-                double colour = arr[ind] - mean;
-                sumOfDiff += Math.pow(colour, 2);
-            }
-        }
-        return sumOfDiff / ((image.getWidth() * image.getHeight()) - 1);
-    }
-
-    private double meanValue(BufferedImage image, int ind) {
-        double tot = 0;
-        double c = 0;
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) {
-                tot = tot + getRGBAG(image, x, y)[ind];
-                c++;
-            }
-        }
-        return tot / c;
-    }
-
-    public int[] getRGBAG(BufferedImage image, int x, int y) {
-        int rgb = image.getRGB(x, y);
-        int aa = (rgb >>> 24) & 0x000000FF;
-        int r = (rgb >>> 16) & 0x000000FF;
-        int g = (rgb >>> 8) & 0x000000FF;
-        int b = (rgb >>> 0) & 0x000000FF;
-        int grey = (r + g + b) / 3;
-
-        int[] arr = {r, g, b, aa, grey};
-        return arr;
-    }
 
     /* Red Standard Deviation */
     public double standardDeviationRed(BufferedImage image, int ind) {
@@ -329,12 +308,14 @@ public class AveragePaint extends Base {
     }
 
     private class Circle implements Comparable<Circle> {
+        private int n = 0;
         private double x = 0;
         private double y = 0;
         private double rad = 0;
         private Color c;
 
-        Circle(double x, double y, double rad, Color c) {
+        Circle(int n, double x, double y, double rad, Color c) {
+            this.n = n;
             this.x = x;
             this.y = y;
             this.rad = rad;
@@ -343,7 +324,8 @@ public class AveragePaint extends Base {
 
         @Override
         public int compareTo(Circle c) {
-            return (int) (this.rad - c.rad);
+            //return (int) (this.rad - c.rad);
+            return (int) (this.n - c.n);
         }
     }
 
@@ -376,91 +358,13 @@ public class AveragePaint extends Base {
         }
     }
 
-    private class HeartShape implements Shape {
-        Path2D.Double p = new Path2D.Double();
-
-        Shape getShape(int size, int off, int x1, int y1) {
-            int d = size * 2;
-            p.moveTo(off, off + d / 4);
-            p.quadTo(off, off, off + d / 4, off);
-            p.quadTo(off + d / 2, off, off + d / 2, off + d / 4);
-            p.quadTo(off + d / 2, off, off + d * 3 / 4, off);
-            p.quadTo(off + d, off, off + d, off + d / 4);
-            p.quadTo(off + d, off + d / 2, off + d * 3 / 4, off + d * 3 / 4);
-            p.lineTo(off + d / 2, off + d);
-            p.lineTo(off + d / 4, off + d * 3 / 4);
-            p.quadTo(off, off + d / 2, off, off + d / 4);
-            p.closePath();
-            AffineTransform at = AffineTransform.getTranslateInstance(x1, y1);
-            return p.createTransformedShape(at);
-        }
-
-        @Override
-        public boolean contains(Point2D arg0) {
-            // TODO Auto-generated method stub
-            return false;
-        }
-
-        @Override
-        public boolean contains(Rectangle2D arg0) {
-            // TODO Auto-generated method stub
-            return false;
-        }
-
-        @Override
-        public boolean contains(double arg0, double arg1) {
-            // TODO Auto-generated method stub
-            return false;
-        }
-
-        @Override
-        public boolean contains(double arg0, double arg1, double arg2,
-                                double arg3) {
-            // TODO Auto-generated method stub
-            return false;
-        }
-
-        @Override
-        public Rectangle getBounds() {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public Rectangle2D getBounds2D() {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public PathIterator getPathIterator(AffineTransform arg0) {
-            return p.getPathIterator(arg0);
-        }
-
-        @Override
-        public PathIterator getPathIterator(AffineTransform arg0, double arg1) {
-            return p.getPathIterator(arg0, arg1);
-        }
-
-        @Override
-        public boolean intersects(Rectangle2D arg0) {
-            // TODO Auto-generated method stub
-            return false;
-        }
-
-        @Override
-        public boolean intersects(double arg0, double arg1, double arg2,
-                                  double arg3) {
-            // TODO Auto-generated method stub
-            return false;
-        }
-    }
-
     public enum Type {
         CIRCLE("CIR"),
         RECT("RECT"),
+        LINE("LINE"),
         HEART("HEART"),
-        SCRIB("SCRIB");
+        SCRIB("SCRIB"),
+        HEX("HEX");
 
         final String name;
 

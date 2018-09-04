@@ -1,4 +1,4 @@
-package main.java.com.op.average;
+package main.java.com.op;
 
 import javax.imageio.*;
 import javax.imageio.metadata.IIOMetadata;
@@ -10,6 +10,60 @@ import java.util.Iterator;
 
 public class Base {
     protected String host = "../host/average/images/out/";
+
+    protected double getSD(BufferedImage bi, int x, int y, int rad) {
+        // HexShape hex = new HexShape(rad, rad, rad);
+        int dia = rad * 2;
+        if (x + dia >= bi.getWidth() || y + dia >= bi.getHeight() || dia <= 0) {
+            return 255;
+        }
+        BufferedImage sub = bi.getSubimage(x, y, dia, dia);
+        // double varRed = getVariance(sub, 0);
+        // double varGreen = getVariance(sub, 1);
+        // double varBlue = getVariance(sub, 2);
+        // System.out.println("x,y=" + x + "," + y + " rgb=" + varRed + ":"
+        // + varGreen + ":" + varBlue);
+        double varGrey = getVariance(sub, 4);
+        return varGrey;
+    }
+
+    protected double getVariance(BufferedImage image, int ind) {
+        double mean = meanValue(image, ind);
+        double sumOfDiff = 0.0;
+
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                int[] arr = getRGBAG(image, x, y);
+                double colour = arr[ind] - mean;
+                sumOfDiff += Math.pow(colour, 2);
+            }
+        }
+        return sumOfDiff / ((image.getWidth() * image.getHeight()) - 1);
+    }
+
+    protected double meanValue(BufferedImage image, int ind) {
+        double tot = 0;
+        double c = 0;
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                tot = tot + getRGBAG(image, x, y)[ind];
+                c++;
+            }
+        }
+        return tot / c;
+    }
+
+    public int[] getRGBAG(BufferedImage image, int x, int y) {
+        int rgb = image.getRGB(x, y);
+        int aa = (rgb >>> 24) & 0x000000FF;
+        int r = (rgb >>> 16) & 0x000000FF;
+        int g = (rgb >>> 8) & 0x000000FF;
+        int b = (rgb >>> 0) & 0x000000FF;
+        int grey = (r + g + b) / 3;
+
+        int[] arr = {r, g, b, aa, grey};
+        return arr;
+    }
 
     public static BufferedImage createAlphaBufferedImage(int ww, int hh) {
         BufferedImage opImage = null;
@@ -75,6 +129,7 @@ public class Base {
             ios.close();
             opImage = null;
             System.gc();
+            System.out.println("Saved " + outfile.getPath());
         } catch (Exception e) {
             throw e;
         }
