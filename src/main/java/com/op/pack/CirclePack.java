@@ -1,15 +1,18 @@
-package main.java.com.op.pack;
+package com.op.pack;
 
-import main.java.com.op.Base;
-import main.java.com.op.HeartShape;
+import com.op.Base;
+import com.op.HeartShape;
+import org.apache.batik.transcoder.TranscoderException;
+import org.apache.batik.transcoder.TranscoderInput;
+import org.apache.batik.transcoder.TranscoderOutput;
+import org.apache.batik.transcoder.image.PNGTranscoder;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 
 public class CirclePack extends Base {
@@ -35,7 +38,7 @@ public class CirclePack extends Base {
     double spacer = 0;
     double angInc = 10;
     double strokeF = 0.25;
-    double maxCirclesF = 3;// 3=20 75 0 10 0.25; 2= 10 30 0
+    double maxCirclesF = 1;// 3=20 75 0 10 0.25; 2= 10 30 0
     private FileWriter writer;
 
     public static void main(String[] args) throws Exception {
@@ -82,49 +85,96 @@ public class CirclePack extends Base {
         writer = new FileWriter(op);
 
         double mm2in = 25.4;
-        int ww = (int)(((double)w)*mm2in/dpi);
-        int hh = (int)(((double)h)*mm2in/dpi);
+        int ww = (int) (((double) w) * mm2in / dpi);
+        int hh = (int) (((double) h) * mm2in / dpi);
         writeLine("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>");
         writeLine("<svg");
         writeLine("        xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:cc=\"http://creativecommons.org/ns#\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" id=\"svg2\"");
-        writeLine("        viewBox=\"0 0 "+w+" "+h+"\"");
-        writeLine("        height=\""+hh+"mm\"");
-        writeLine("        width=\""+ww+"mm\">");
+        writeLine("        viewBox=\"0 0 " + w + " " + h + "\"");
+        writeLine("        height=\"" + hh + "mm\"");
+        writeLine("        width=\"" + ww + "mm\">");
         writeLine("  <defs id=\"defs4\">");
         int i = 2;//0
         int j = 2;//0
         int k = -1;//0
         int l = -1;//0
-        writeFilter(0, k, l, i, j, 8, 0.013, 27);
-        writeFilter(1, k*2, l*2, i*2, j*2, 16, 0.012, 30);
-        writeFilter(2, k*3, l*3, i*3, j*3, 24, 0.011, 40);
-        writeFilter(3, k*4, l*4, i*4, j*4, 28, 0.01, 50);
-        writeFilter(4, k*5, l*5, i*5, j*5, 32, 0.009, 60);
-        writeFilter(5, k*6, l*6, i*6, j*6, 36, 0.008, 70);
-        writeFilter(6, k*7, l*7, i*7, j*7, 40, 0.007, 70);
+
+        //writeOneFilter();
+        writeFilter(0, -1, -1, 2, 2, 20, 0.02, 27);
+        writeFilter(1, -1, -1, 2, 2, 25, 0.018, 27);
+        writeFilter(2, -1, -1, 2, 2, 30, 0.017, 27);
+        writeFilter(3, -1, -1, 2, 2, 35, 0.0165, 27);
+        writeFilter(4, -1, -1, 2, 2, 40, 0.016, 27);
+        writeFilter(5, -1, -1, 2, 2, 45, 0.0155, 27);
+        writeFilter(6, -1, -1, 2, 2, 50, 0.015, 27);
         writeLine("  </defs>");
         writeLine("  <g id=\"layer1\">");
     }
 
-    private void writeFilter(int filterNum, double x, double y, double w, double h, int std, double baseFreq, int seed) {
-        writeLine("    <filter id=\"filterWatercolor"+filterNum+"\" style=\"color-interpolation-filters:sRGB;\" x=\""+x+"\" width=\""+w+"\" y=\""+y+"\" height=\""+h+"\">");
-        writeLine("      <feGaussianBlur id=\"feGaussianBlur4140\" result=\"result8"+filterNum+"\" stdDeviation=\""+std+"\" />");
-        writeLine("      <feTurbulence id=\"feTurbulence4142\" baseFrequency=\""+baseFreq+"\" numOctaves=\"5\" type=\"fractalNoise\" result=\"result7"+filterNum+"\" seed=\""+seed+"\" />");
-        writeLine("      <feComposite id=\"feComposite4144\" in=\"result7"+filterNum+"\" operator=\"over\" result=\"result6"+filterNum+"\" in2=\"result8"+filterNum+"\" />");
-        writeLine("      <feColorMatrix id=\"feColorMatrix4146\" values=\"1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 6 -4 \" result=\"result9"+filterNum+"\" />");
-        writeLine("      <feDisplacementMap scale=\""+(filterNum*100+100)+"\" id=\"feDisplacementMap4148\" result=\"result4"+filterNum+"\" yChannelSelector=\"A\" xChannelSelector=\"A\" in2=\"result9"+filterNum+"\" in=\"result7"+filterNum+"\" />");
-        writeLine("      <feComposite id=\"feComposite4150\" in=\"result8"+filterNum+"\" operator=\"in\" result=\"result2"+filterNum+"\" in2=\"result4"+filterNum+"\" />");
-        writeLine("      <feComposite id=\"feComposite4152\" in2=\"result9"+filterNum+"\" operator=\"in\" in=\"result2\" result=\"fbSourceGraphic\" />");
-        writeLine("      <feComposite id=\"feComposite4154\" result=\"result91"+filterNum+"\" in2=\"fbSourceGraphic\" in=\"fbSourceGraphic\" k1=\"0.5\" k2=\"1\" operator=\"arithmetic\" />");
-        writeLine("      <feBlend id=\"feBlend4156\" in2=\"result91"+filterNum+"\" mode=\"multiply\" in=\"fbSourceGraphic\" />");
+    private void writeOneFilter() {
+        writeLine("    <filter id=\"filterWatercolor0\" style=\"color-interpolation-filters:sRGB;\" x=\"-1\" width=\"2\" y=\"-1\" height=\"2\">");
+        writeLine("      <feGaussianBlur id=\"feGaussianBlur4140\" result=\"result8\" stdDeviation=\"50\" />");
+        writeLine("      <feTurbulence id=\"feTurbulence4142\" baseFrequency=\"0.015\" numOctaves=\"5\" type=\"fractalNoise\" result=\"result7\" seed=\"27\" />");
+        writeLine("      <feComposite id=\"feComposite4144\" in=\"result7\" operator=\"over\" result=\"result6\" in2=\"result8\" />");
+        writeLine("      <feColorMatrix id=\"feColorMatrix4146\" values=\"1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 6 -4 \" result=\"result9\" />");
+        writeLine("      <feDisplacementMap id=\"feDisplacementMap4148\" result=\"result4\" scale=\"45\" yChannelSelector=\"A\" xChannelSelector=\"A\" in2=\"result9\" in=\"result7\" />");
+        writeLine("      <feComposite id=\"feComposite4150\" in=\"result8\" operator=\"in\" result=\"result2\" in2=\"result4\" />");
+        writeLine("      <feComposite id=\"feComposite4152\" in2=\"result9\" operator=\"in\" in=\"result2\" result=\"fbSourceGraphic\" />");
+        writeLine("      <feComposite id=\"feComposite4154\" result=\"result91\" in2=\"fbSourceGraphic\" in=\"fbSourceGraphic\" k1=\"0.5\" k2=\"1\" operator=\"arithmetic\" />");
+        writeLine("      <feBlend id=\"feBlend4156\" in2=\"result91\" mode=\"multiply\" in=\"fbSourceGraphic\" />");
         writeLine("    </filter>");
+
     }
 
-    void endSVG() throws IOException {
+    private void writeFilter(int filterNum, double x, double y, double w, double h, int std, double baseFreq, int seed) {
+        String str = "    <filter id=\"filterWatercolor%s\" style=\"color-interpolation-filters:sRGB;\" x=\"%s\" y=\"%s\" width=\"%s\" height=\"%s\">";
+        str = str + "      <feGaussianBlur id=\"feGaussianBlur4140\" result=\"result8\" stdDeviation=\"%s\" />";
+        str = str + "      <feTurbulence id=\"feTurbulence4142\" baseFrequency=\"%s\" numOctaves=\"5\" type=\"fractalNoise\" result=\"result7\" seed=\"%s\" />";
+        str = str + "      <feComposite id=\"feComposite4144\" in=\"result7\" operator=\"over\" result=\"result6\" in2=\"result8\" />";
+        str = str + "      <feColorMatrix id=\"feColorMatrix4146\" values=\"1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 6 -4 \" result=\"result9\" />";
+        str = str + "      <feDisplacementMap id=\"feDisplacementMap4148\" result=\"result4\" scale=\"45\" yChannelSelector=\"A\" xChannelSelector=\"A\" in2=\"result9\" in=\"result7\" />";
+        str = str + "      <feComposite id=\"feComposite4150\" in=\"result8\" operator=\"in\" result=\"result2\" in2=\"result4\" />";
+        str = str + "      <feComposite id=\"feComposite4152\" in2=\"result9\" operator=\"in\" in=\"result2\" result=\"fbSourceGraphic\" />";
+        str = str + "      <feComposite id=\"feComposite4154\" result=\"result91\" in2=\"fbSourceGraphic\" in=\"fbSourceGraphic\" k1=\"0.5\" k2=\"1\" operator=\"arithmetic\" />";
+        str = str + "      <feBlend id=\"feBlend4156\" in2=\"result91\" mode=\"multiply\" in=\"fbSourceGraphic\" />";
+        str = str + "    </filter>";
+
+        String line = String.format(str, filterNum, x, y, w, h, std, baseFreq, seed);
+        writeLine(line);
+    }
+
+    void endSVG() throws IOException, TranscoderException {
         writeLine("  </g>");
         writeLine("  </svg>");
 
         writer.close();
+        System.out.println("Saved " + dir + ipFile + "_" + opFile + ".svg");
+
+        saveSVGtoPNG();
+
+    }
+
+    private void saveSVGtoPNG() throws IOException, TranscoderException {
+        //Step -1: We read the input SVG document into Transcoder Input
+        //We use Java NIO for this purpose
+        //String svg_URI_input = Paths.get(dir + "watercolorPlain.svg").toUri().toURL().toString();
+        String svg_URI_input = Paths.get(dir + ipFile + "_" + opFile + ".svg").toUri().toURL().toString();
+        TranscoderInput input_svg_image = new TranscoderInput(svg_URI_input);
+        //Step-2: Define OutputStream to PNG Image and attach to TranscoderOutput
+        OutputStream png_ostream = new FileOutputStream(dir + ipFile + "_" + opFile + "_screen.png");
+        TranscoderOutput output_png_image = new TranscoderOutput(png_ostream);
+        // Step-3: Create PNGTranscoder and define hints if required
+        PNGTranscoder my_converter = new PNGTranscoder();
+        my_converter.addTranscodingHint(PNGTranscoder.KEY_WIDTH, (float)w);
+        my_converter.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, (float)h);
+        //JPEGTranscoder my_converter = new JPEGTranscoder();
+        // Step-4: Convert and Write output
+        my_converter.transcode(input_svg_image, output_png_image);
+        // Step 5- close / flush Output Stream
+        png_ostream.flush();
+        png_ostream.close();
+        System.out.println("Saved " + svg_URI_input + "_screen.png");
+
     }
 
     int draw(int numTry) {
@@ -184,11 +234,15 @@ public class CirclePack extends Base {
         int cx = (int) x;
         int cy = (int) y;
         int r = (int) rr;
+
+        double rf = 1.25;
+        int r2 = (int) (rr * rf);
         String color = toHexString(col);
 
-        int wfRnd  = (int)(Math.random()*5);
-        int wf = (int)(5 * (rr /maxR));
-        writeLine("  	<circle cx=\""+cx+"\" cy=\""+cy+"\" r=\""+r+"\" style=\"fill:"+color+";stroke:"+color+";stroke-width:1;filter:url(#filterWatercolor"+wf+")\" />");
+        int wfRnd = (int) (Math.random() * 5);
+        int wf = (int) (5 * (rr / maxR));
+        //wf = 0;
+        writeLine("  	<circle cx=\"" + cx + "\" cy=\"" + cy + "\" r=\"" + (r2) + "\" style=\"fill:" + color + ";filter:url(#filterWatercolor" + wf + ")\" />");
     }
 
     private String toHexString(Color colour) throws NullPointerException {

@@ -1,8 +1,8 @@
-package main.java.com.op.average;
+package com.op.average;
 
 
-import main.java.com.op.Base;
-import main.java.com.op.HeartShape;
+import com.op.Base;
+import com.op.HeartShape;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

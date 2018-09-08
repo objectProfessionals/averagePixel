@@ -1,4 +1,4 @@
-package main.java.com.op;
+package com.op;
 
 import javax.imageio.*;
 import javax.imageio.metadata.IIOMetadata;
