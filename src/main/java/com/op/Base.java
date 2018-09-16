@@ -11,7 +11,21 @@ import java.util.Iterator;
 public class Base {
     protected String host = "../host/average/images/out/";
 
-    protected double getSD(BufferedImage bi, int x, int y, int rad) {
+    protected double getSDColor(BufferedImage bi, int x, int y, int rad) {
+        int dia = rad * 2;
+        if (x + dia >= bi.getWidth() || y + dia >= bi.getHeight() || dia <= 0) {
+            return 255;
+        }
+        BufferedImage sub = bi.getSubimage(x, y, dia, dia);
+         double varRed = getVariance(sub, 0);
+         double varGreen = getVariance(sub, 1);
+         double varBlue = getVariance(sub, 2);
+//         System.out.println("x,y=" + x + "," + y + " rgb=" + varRed + ":"
+//         + varGreen + ":" + varBlue);
+        return (varRed +varGreen +varBlue)/3;
+    }
+
+    protected double getSDGrey(BufferedImage bi, int x, int y, int rad) {
         // HexShape hex = new HexShape(rad, rad, rad);
         int dia = rad * 2;
         if (x + dia >= bi.getWidth() || y + dia >= bi.getHeight() || dia <= 0) {

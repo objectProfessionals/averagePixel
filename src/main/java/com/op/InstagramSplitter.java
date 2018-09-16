@@ -11,8 +11,8 @@ public class InstagramSplitter extends Base {
 
 	private static InstagramSplitter splitter = new InstagramSplitter();
 
-	private String ip = "VirgaCol_CirclePack";
-	private String ipFile = host + ip;
+	private String ip = "San_Vir_Ishihara";
+	private String ipFile = host + "ishihara/"+ip;
 	private String opFile = ip + "_OUT";
 
 	private static final int TYPE_ZOOM = 0;

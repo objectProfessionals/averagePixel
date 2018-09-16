@@ -10,19 +10,19 @@ import org.apache.batik.transcoder.image.PNGTranscoder;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
-import java.awt.geom.Rectangle2D;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 
-public class CirclePack extends Base {
+public class CirclePackSDev extends Base {
 
-    private static CirclePack circlePack = new CirclePack();
+    private static CirclePackSDev circlePack = new CirclePackSDev();
     //  R.A. Robertson 2012.03 "Circle Packing 3" ~ www.rariora.org ~
     private String dir = host + "";
-    private String ipFile = "VirgaCol";
-    private String opFile = "CirclePack";
+    private String ipFile = "VirgaColRound";
+    private String opFile = "CirclePackSDev";
     private int w = 0;
     private int h = 0;
     private double dpi = 300;
@@ -34,15 +34,21 @@ public class CirclePack extends Base {
     Color ground = Color.WHITE;  // Background color.
     Color fill = Color.BLACK;  // Background color.
     int maxCircles = 0;
-    double minR = 20;
+    double minR = 50;
     double maxR = 75;
+    private int lowestRad = 25;
+    double minRDec = 1;
+    double maxRDec = 2;
     double bf = 1;
     double spacer = 0;
     double angInc = 10;
     double strokeF = 0.25;
     double maxCirclesF = 3;// VirgaCol:3=20 75 1 0 10 0.25; 2= 10 30 0
     private FileWriter writer;
-    private boolean innerCircleOnly = false;
+    private boolean innerCircleOnly = true;
+    private double sdMax = 25;
+    private double sdMaxInc = 5;
+    private int maxTryCount = 1000; //200000;
 
     public static void main(String[] args) throws Exception {
         circlePack.run();
@@ -50,12 +56,12 @@ public class CirclePack extends Base {
 
     private void run() throws Exception {
         setup();
-        setupSVG();
+        //setupSVG();
 
         drawAll();
 
         save();
-        endSVG();
+        //endSVG();
     }
 
     private void drawAll() {
@@ -182,21 +188,27 @@ public class CirclePack extends Base {
     }
 
     int draw(int numTry) {
+        if(sdMax > 255) {
+            return 0;
+        }
+
         int tryCount = 0;
         double ww = (double) w;
         double hh = (double) h;
         boolean hasGroundOnlyColor;
-        double r = minR + Math.random() * maxR;
+        //double r = minR + Math.random() * maxR;
+        double r = maxR;
         double x = Math.random() * ww;
         double y = Math.random() * hh;
         double rr = r + spacer;
         hasGroundOnlyColor = hasOnlyGroundColor(x, y, rr);
 
-        double border = (double) (w) * 0.25;
+        double border = (double)(w)*0.2;
         if (innerCircleOnly) {
-            Ellipse2D inner = new Ellipse2D.Double(border, border, w - 2 * border, h - 2 * border);
-            Rectangle2D in = new Rectangle2D.Double(x - rr / 2, y - rr / 2, rr, rr);
+            Ellipse2D inner = new Ellipse2D.Double(border, border, w-2*border, h-2*border);
+            Point2D in = new Point2D.Double(x, y);
             if (!inner.contains(in)) {
+                //System.out.println("inside x,y="+x+","+y);
                 hasGroundOnlyColor = false;
             }
         }
@@ -206,16 +218,18 @@ public class CirclePack extends Base {
             tryCount++;
             //System.out.println("rr"+rr);
             if (!hasGroundOnlyColor && rr <= minR) {
-                r = minR + Math.random() * maxR;
+                //r = minR + Math.random() * maxR;
+                r = maxR;
                 x = Math.random() * ww;
                 y = Math.random() * hh;
                 rr = r + spacer;
                 //System.out.println("tryAgain");
                 hasGroundOnlyColor = hasOnlyGroundColor(x, y, rr);
                 if (innerCircleOnly) {
-                    Ellipse2D inner = new Ellipse2D.Double(border, border, w - 2 * border, h - 2 * border);
-                    Rectangle2D in = new Rectangle2D.Double(x - rr / 2, y - rr / 2, rr, rr);
+                    Ellipse2D inner = new Ellipse2D.Double(border, border, w-2*border, h-2*border);
+                    Point2D in = new Point2D.Double(x, y);
                     if (!inner.contains(in)) {
+                        //System.out.println("inside2 x,y="+x+","+y);
                         hasGroundOnlyColor = false;
                     }
                 }
@@ -227,13 +241,15 @@ public class CirclePack extends Base {
             Color col = getAverageColor(x, y, r);
             circleList.add(new Circle(x, y, r));
             drawOne(x, y, rr, col);
-            drawOneSVG(x, y, rr, col);
+            //drawOneSVG(x, y, rr, col);
         }
-        if (tryCount > 200000) {
-            minR = Math.max(2, minR - 1);
-        }
-        System.out.println("hasOnlyGroundColor:" + hasGroundOnlyColor + " numTry:" + numTry + " circles:" + circleList.size() + " tryCount:" + tryCount + " minRad:" + minR);
 
+        if (tryCount > maxTryCount) {
+            minR = Math.max(lowestRad, minR - minRDec);
+            maxR = Math.max(minR+1, maxR - maxRDec);
+            sdMax = sdMax + sdMaxInc;
+        }
+        System.out.println("radius:" + rr + " numTry:" + numTry + " sdMax:" + sdMax + " tryCount:" + tryCount + " minRad:" + minR + " maxR:"+maxR);
 
         return tryCount;
     }
@@ -247,7 +263,7 @@ public class CirclePack extends Base {
 
         opG.setColor(col.darker());
         opG.setStroke(new BasicStroke((float) (minR * strokeF)));
-        opG.draw(shape);
+        //opG.draw(shape);
     }
 
     private void drawOneSVG(double x, double y, double rr, Color col) {
@@ -345,6 +361,12 @@ public class CirclePack extends Base {
                     return false;
                 }
             }
+        }
+
+        double sd = getSDColor(ibi, (int)x, (int)y, (int)r);
+        if (sd > sdMax) {
+            //System.out.println("SD="+sd);
+            return false;
         }
 
         return true;

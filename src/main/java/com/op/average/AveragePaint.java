@@ -120,7 +120,7 @@ public class AveragePaint extends Base {
     }
 
     private void paintOneHex(BufferedImage bi, int rad, int x, int y) {
-        double var = getSD(bi, x, y, rad);
+        double var = getSDColor(bi, x, y, rad);
         if (var < lowThreshold) {
             paintHex(bi, x, y, rad);
         } else {
@@ -161,7 +161,7 @@ public class AveragePaint extends Base {
     }
 
     private void paintOne(BufferedImage bi, int rad, int x, int y) {
-        double var = getSD(bi, x, y, rad);
+        double var = getSDColor(bi, x, y, rad);
         if (var < lowThreshold) {
             paintOneType(bi, x, y, rad);
         } else {
