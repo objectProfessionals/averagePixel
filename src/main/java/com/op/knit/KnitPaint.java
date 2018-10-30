@@ -19,19 +19,19 @@ public class KnitPaint extends Base {
 
     private static KnitPaint knitPaint = new KnitPaint();
 
-    private double numPoints = 120;
-    private double wBreak = 0.1; // smaller = darker
+    private double numPoints = 60;
+    private double wBreak = 0.15; // smaller = darker
     private double curveVar = 0.025;//0.025
     private double radF = 0.75;
 
     private float stroke = 1f;
-    private float strokeMask = stroke * 2;
+    private float strokeMask = stroke * 3;
     private double maxErrors = 5;
     private int errorPinOffset = ((int)numPoints/10);
 
     private String dir = host + "knit/";
-    private String ipFile = "VirgaOrigB";
-    //private String ipFile = "Heart2";
+    //private String ipFile = "Virga3B";
+    private String ipFile = "Heart2";
     private String opFile = "KnitOut";
     private int w = 0;
     private int h = 0;
@@ -162,7 +162,8 @@ public class KnitPaint extends Base {
         int x2 = (int) xEn;
         int y2 = (int) yEn;
 
-        System.out.println("x1,y1:x2,y2 = " + x1 + "," + y1 + ":" + x2 + "," + y2);
+        //System.out.println("x1,y1:x2,y2 = " + x1 + "," + y1 + ":" + x2 + "," + y2);
+        System.out.println("p1:p2 = "+l.startPin+":"+l.endPin);
         drawLine(opG, x1, y1, x2, y2);
         drawLine(ipG, x1, y1, x2, y2);
 
