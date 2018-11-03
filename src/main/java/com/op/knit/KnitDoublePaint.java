@@ -14,9 +14,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
-public class KnitPaint extends Base {
+public class KnitDoublePaint extends Base {
 
-    private static KnitPaint knitPaint = new KnitPaint();
+    private static KnitDoublePaint knitPaint = new KnitDoublePaint();
 
     private double numPoints = 60;
     private double wBreakFloor = 0.02; // use with maxErrors
@@ -34,21 +34,23 @@ public class KnitPaint extends Base {
     private double wBreakDelta = wBreakMin - wBreakFloor;
 
     private String dir = host + "knit/";
-    //private String ipFile = "VirgaOrigC";
-    //private String ipFile = "Heart";
-    private String ipFile = "V";
-    private String opFile = "KnitOut-"+wBreakFloor+"-"+wBreakMin+"-"+alphaStart;
+    private String ipFile1 = "Heart";
+    private String ipFile2 = "V";
+    private String opFile = "KnitDOut-" + wBreakFloor + "-" + wBreakMin + "-" + alphaStart;
     private int w = 0;
     private int h = 0;
     private int errorCount = 0;
 
-    private ArrayList<Line> usedLines = new ArrayList<Line>();
-    private BufferedImage ibi;
-    private Graphics2D ipG;
+    private ArrayList<Line> usedLines1 = new ArrayList<Line>();
+    private ArrayList<Line> usedLines2 = new ArrayList<Line>();
+    private BufferedImage ibi1;
+    private Graphics2D ipG1;
+    private BufferedImage ibi2;
+    private Graphics2D ipG2;
 
     private BufferedImage obi;
     private Graphics2D opG;
-    private double startPinPos = numPoints/4;
+    private double startPinPos = numPoints - (numPoints / 4);
 
     public static void main(String[] args) throws IOException {
         knitPaint.draw();
@@ -57,8 +59,6 @@ public class KnitPaint extends Base {
     public void draw() throws IOException {
         init();
 
-        //calcAllPins();
-        //drawAll();
         drawContinuous();
 
         save();
@@ -68,25 +68,31 @@ public class KnitPaint extends Base {
     private void drawContinuous() throws IOException {
         double ang = 360 / numPoints;
         Pin pin = null;
-        int endPinPos = (int)startPinPos;
+        int endPinPos = (int) startPinPos;
         int count = 0;
         HashMap stEn = new HashMap<Pin, Integer>();
         while (endPinPos != -1) {
-            pin = calc(endPinPos);
+            boolean first = count % 2 == 0;
+            BufferedImage ibi = first ? ibi1 : ibi2;
+            Graphics2D ipG = first ? ipG1 : ipG2;
+            ArrayList used = first ? usedLines1 : usedLines2;
+            Color opCol = first ? Color.RED : Color.BLUE;
+            pin = calc(ibi, endPinPos);
             if (stEn.get(pin) == null) {
                 stEn.put(pin, 0);
             } else {
                 stEn.put(pin, ((int) stEn.get(pin)) + 1);
             }
-            endPinPos = drawFromPin(pin);
+            endPinPos = drawFromPin(pin, used, ipG, opCol);
             count++;
             //saveMask();
+            //break;
         }
         saveMask();
         println("count=" + count, true);
     }
 
-    private Pin calc(int pos) {
+    private Pin calc(BufferedImage ibi, int pos) {
         double ang = 360 / numPoints;
         double angSt = pos * ang;
 
@@ -106,7 +112,7 @@ public class KnitPaint extends Base {
             Line l = new Line();
             l.startPin = pos;
             l.endPin = c2;
-            l.blackness = getBlackness(angSt, angEn);
+            l.blackness = getBlackness(ibi, angSt, angEn);
             p.endPointsbyWeighting.put(l.blackness, l);
             p.pos = pos;
 
@@ -116,7 +122,7 @@ public class KnitPaint extends Base {
     }
 
 
-    private int drawFromPin(Pin pin) {
+    private int drawFromPin(Pin pin, ArrayList usedLines, Graphics2D ipG, Color opCol) {
 
         ArrayList<Line> allLines = new ArrayList<>();
         for (Line l : pin.endPointsbyWeighting.values()) {
@@ -126,7 +132,7 @@ public class KnitPaint extends Base {
             Line l = (Line) allLines.get(c);
             if (l.blackness > wBreakMin && l.blackness < wBreakMax && !usedLines.contains(l)) {
                 //if (l.blackness > pin.remBreak && !usedLines.contains(l)) {
-                drawLine(l);
+                drawLine(l, ipG, opCol);
                 usedLines.add(l);
                 return l.endPin;
             }
@@ -140,7 +146,7 @@ public class KnitPaint extends Base {
             wBreakMin = wBreakFloor + wBreakDelta * (1 - (errorCount / maxErrors));
             l.startPin = pin.pos;
             l.endPin = p2;
-            drawLine(l);
+            drawLine(l, ipG, opCol);
             alphaStart = alphaStart - (alphaStart / (maxErrors * 1.1));
             ipG.setColor(new Color(255, 255, 255, ((int) (255.0 * (double) alphaStart))));
             println("errorCount=" + errorCount + " wBreakMin=" + wBreakMin + " wBreakMax=" + wBreakMax + " alphaStart=" + alphaStart + " usedLines=" + usedLines.size(), !printCoords);
@@ -149,7 +155,7 @@ public class KnitPaint extends Base {
         return -1;
     }
 
-    private void drawLine(Line l) {
+    private void drawLine(Line l, Graphics2D ipG, Color opCol) {
         double rad = radF * ((double) w) / 2.0;
         int cx = w / 2;
         int cy = h / 2;
@@ -170,7 +176,10 @@ public class KnitPaint extends Base {
         int y2 = (int) yEn;
 
         println("x1,y1:x2,y2 = " + x1 + "," + y1 + ":" + x2 + "," + y2, !printCoords);
-        println("p1:p2 = " + l.startPin + ":" + l.endPin, printCoords);
+        int st = 1 + (int) ((numPoints + (l.startPin - startPinPos)) % numPoints);
+        int en = 1 + (int) ((numPoints + (l.endPin - startPinPos)) % numPoints);
+        println("p1:p2 = " + st + ":" + en, printCoords);
+        opG.setColor(opCol);
         drawLine(opG, x1, y1, x2, y2);
         drawLine(ipG, x1, y1, x2, y2);
 
@@ -183,6 +192,7 @@ public class KnitPaint extends Base {
             System.out.println(str);
         }
     }
+
     private void drawLine(Graphics2D g, int x1, int y1, int x2, int y2) {
         double var = curveVar * (-0.5 + Math.random());
         QuadCurve2D curve = new QuadCurve2D.Double();
@@ -190,7 +200,7 @@ public class KnitPaint extends Base {
         g.draw(curve);
     }
 
-    private double getBlackness(double angSt, double angEn) {
+    private double getBlackness(BufferedImage bi, double angSt, double angEn) {
         double rad = radF * ((double) w) / 2.0;
         int cx = w / 2;
         int cy = h / 2;
@@ -211,7 +221,7 @@ public class KnitPaint extends Base {
             int xx = (int) (x1 + dx * s);
             int yy = (int) (y1 + dy * s);
 
-            Color col = new Color(ibi.getRGB(xx, yy));
+            Color col = new Color(bi.getRGB(xx, yy));
             double white = ((double) (col.getRed() + col.getGreen() + col.getBlue())) / 3.0;
             white = white / 255.0;
             totWhite = totWhite + white;
@@ -220,10 +230,12 @@ public class KnitPaint extends Base {
     }
 
     private void init() throws IOException {
-        File ip = new File(dir + ipFile + ".jpg");
-        ibi = ImageIO.read(ip);
-        w = ibi.getWidth();
-        h = ibi.getHeight();
+        File ip = new File(dir + ipFile1 + ".jpg");
+        ibi1 = ImageIO.read(ip);
+        File ip2 = new File(dir + ipFile2 + ".jpg");
+        ibi2 = ImageIO.read(ip2);
+        w = ibi1.getWidth();
+        h = ibi1.getHeight();
         curveVar = w * curveVar;
 
         obi = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
@@ -234,38 +246,35 @@ public class KnitPaint extends Base {
         opG.fillRect(0, 0, w, h);
         opG.setColor(Color.BLACK);
         opG.setStroke(new BasicStroke(stroke));
-        //wBreak = calcBreak();
-
-        ipG = (Graphics2D) ibi.getGraphics();
         opG.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_OFF);
-        ipG.setStroke(new BasicStroke(strokeMask));
-        ipG.setColor(new Color(255, 255, 255, ((int) (255.0 * (double) alphaStart))));
-    }
+        //wBreak = calcBreak();
 
-    private double calcWBreak() {
-        double tot = 0;
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                int rgb = ibi.getRGB(x, y);
-                Color c = new Color(rgb);
-                double g = (c.getRed() + c.getGreen() + c.getBlue()) / 3.0;
-                tot = tot + g;
-            }
-        }
-        return tot / (double) (255.0 * w * h);
+        ipG1 = (Graphics2D) ibi1.getGraphics();
+        ipG1.setStroke(new BasicStroke(strokeMask));
+        //ipG1.setColor(new Color(255, 0, 0, ((int) (255.0 * (double) alphaStart))));
+        ipG1.setColor(new Color(255, 255, 255, ((int) (255.0 * (double) alphaStart))));
+
+        ipG2 = (Graphics2D) ibi2.getGraphics();
+        ipG2.setStroke(new BasicStroke(strokeMask));
+        //ipG2.setColor(new Color(0, 0, 255, ((int) (255.0 * (double) alphaStart))));
+        ipG2.setColor(new Color(255, 255, 255, ((int) (255.0 * (double) alphaStart))));
+
     }
 
     private void save() throws IOException {
-        File op1 = new File(dir + ipFile + opFile + ".jpg");
+        File op1 = new File(dir + ipFile1 + "-" + ipFile2 + opFile + ".jpg");
         ImageIO.write(obi, "jpg", op1);
         System.out.println("Saved " + op1.getPath());
     }
 
     private void saveMask() throws IOException {
-        File op1 = new File(dir + ipFile + "_MASK.jpg");
-        ImageIO.write(ibi, "jpg", op1);
+        File op1 = new File(dir + ipFile1 + "_MASK.jpg");
+        ImageIO.write(ibi1, "jpg", op1);
         System.out.println("Saved " + op1.getPath());
+        File op2 = new File(dir + ipFile2 + "_MASK.jpg");
+        ImageIO.write(ibi2, "jpg", op2);
+        System.out.println("Saved " + op2.getPath());
     }
 
     private class Line implements Comparable {
