@@ -17,7 +17,7 @@ public class AveragePaint extends Base {
 
     private static AveragePaint averagePaint = new AveragePaint();
 
-    private String dir = host + "";
+    private String dir = host + "average/";
     private String ipFile = "Virga";
     private String opFilePre = "Out";
     private int w = 0;
@@ -25,7 +25,7 @@ public class AveragePaint extends Base {
     private Type type = Type.LINE;
     private String opFile = opFilePre + type.name();
 
-    private double scale = 12;
+    private double scale = type.scale;
     private int radStart = 0;
     private double radMin = 0;
     private double lowThreshold = 30.0;//300
@@ -284,7 +284,8 @@ public class AveragePaint extends Base {
         tr.concatenate(ro);
         p.transform(tr);
         //opG.clip(new Ellipse2D.Double(x, y, 2 * rrad, 2 * rrad));
-        opG.setStroke(new BasicStroke(5));
+        float lineStroke = 1f + (float)(w/1000);
+        opG.setStroke(new BasicStroke(lineStroke));
         //System.out.println("M"+p.);
         opG.draw(p);
     }
@@ -359,17 +360,19 @@ public class AveragePaint extends Base {
     }
 
     public enum Type {
-        CIRCLE("CIR"),
-        RECT("RECT"),
-        LINE("LINE"),
-        HEART("HEART"),
-        SCRIB("SCRIB"),
-        HEX("HEX");
+        CIRCLE("CIR", 12),
+        RECT("RECT", 12),
+        LINE("LINE", 32),
+        HEART("HEART", 12),
+        SCRIB("SCRIB", 12),
+        HEX("HEX", 12);
 
         final String name;
+        final double scale;
 
-        Type(String name) {
+        Type(String name, double scale) {
             this.name = name;
+            this.scale = scale;
         }
     }
 }

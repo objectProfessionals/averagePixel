@@ -33,7 +33,7 @@ public class KnitDoublePaint extends Base {
     private int errorPinOffset = ((int) numPoints / 10);
     private double wBreakDelta = wBreakMin - wBreakFloor;
 
-    private String dir = host + "knit/";
+    private String dir = host + "knit/double/";
     private String ipFile1 = "Heart";
     private String ipFile2 = "V";
     private String opFile = "KnitDOut-" + wBreakFloor + "-" + wBreakMin + "-" + alphaStart;

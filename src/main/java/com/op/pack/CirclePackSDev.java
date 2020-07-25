@@ -20,7 +20,7 @@ public class CirclePackSDev extends Base {
 
     private static CirclePackSDev circlePack = new CirclePackSDev();
     //  R.A. Robertson 2012.03 "Circle Packing 3" ~ www.rariora.org ~
-    private String dir = host + "";
+    private String dir = host + "circlePack/";
     private String ipFile = "VirgaColRound";
     private String opFile = "CirclePackSDev";
     private int w = 0;

@@ -5,48 +5,43 @@ import com.op.Base;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.QuadCurve2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-public class KnitPaint extends Base {
+public class KnitPaintFromAll extends Base {
 
-    private static KnitPaint knitPaint = new KnitPaint();
+    private static KnitPaintFromAll knitPaint = new KnitPaintFromAll();
 
-    private double numPoints = 240;
-    private double wBlacknessMin = 0.05; // smaller = darker
-    private double wBlacknessMax = 0.3;
-    private double wBreakFloor = wBlacknessMin; // darkest, use with maxErrors
-
-    private boolean impByCol = false;
-    private double maxErrors = 0;
-    private double alphaStart = 0.25;//smaller = darker, use with maxErrors
-
+    private double numPoints = 100; //70 * 4;//120;
+    private double wBreakMin = 0.05; // smaller = darker
+    private double wBreakMax = 0.25;
+    private double maxErrors = 1;
+    private double wBreakFloor = 0.25; // darkest, use with maxErrors
+    private double alphaStart = 1;//smaller = darker, use with maxErrors
     private double radF = 0.9;
     private double blacknessRadF = radF; // rad for concentration
-    private double lightenF = 1;
+    private double lightenF = 0.2;
 
-    private double curveVar = 0; //0.025;
-    private boolean printCoords = true;
+    private double curveVar = 0.025;//0.025
+    private boolean printCoords = false;
 
     private float stroke = 1f;
-    private float strokeMask = stroke * 3; /// str multiple - smaller = darker
+    private float strokeMask = stroke * 1;
 
     private boolean samplePatch = false;
     private float samplePatchF = 2f;
 
     private int errorPinOffset = ((int) numPoints / 10);
-    private double wBreakDelta = wBlacknessMin - wBreakFloor;
+    private double wBreakDelta = wBreakMin - wBreakFloor;
 
     private String dir = host + "knit/";
-    private String ipFile = "Virga2BW2";
-    //private String ipFile = "Virga2000-LINE_INV";
+    private String ipFile = "Virga1000Outline";
     //private String ipFile = "hansolo";
     //private String ipFile = "Heart";
-    private String opFile = "KnitOut-" + wBreakFloor + "-" + wBlacknessMin + "-" + wBlacknessMax;
+    private String opFile = "KnitOutAll-" + wBreakFloor + "-" + wBreakMin + "-" + alphaStart;
     private int w = 0;
     private int h = 0;
     private int errorCount = 0;
@@ -57,7 +52,7 @@ public class KnitPaint extends Base {
 
     private BufferedImage obi;
     private Graphics2D opG;
-    private double startPinPos = 0; //numPoints / 4;
+    private double startPinPos = numPoints / 4;
 
     public static void main(String[] args) throws IOException {
         knitPaint.draw();
@@ -66,20 +61,64 @@ public class KnitPaint extends Base {
     public void draw() throws IOException {
         init();
 
-        drawContinuous();
+        calcBestPins();
+        //drawAll();
+        //drawContinuous();
 
         save();
     }
 
+    private void calcBestPins() {
+        double ang = 360 / numPoints;
+        int i = 0;
+        ArrayList<Line> lines = new ArrayList();
+        for (double st = 0; st< 360; st = st +ang) {
+            int j = 0;
+            for (double en = 0; en< 360; en = en +ang) {
+                if (st != en) {
+                    Line l = new Line();
+                    l.startPin = i;
+                    l.endPin = j;
+                    if (samplePatch) {
+                        l.blackness = getBlacknessByPatch(st, en);
+                    } else {
+                        l.blackness = getBlacknessLine(st, en);
+                    }
+                    lines.add(l);
+                }
+                j++;
+            }
+            i++;
+        }
+        Collections.sort(lines);
+        Collections.reverse(lines);
+
+        int c = 0;
+        for (Line l : lines) {
+            if (c> 1000) {
+                break;
+            }
+            drawLine(l);
+            c++;
+        }
+
+    }
+
 
     private void drawContinuous() throws IOException {
+        double ang = 360 / numPoints;
         Pin pin = null;
         int endPinPos = (int) startPinPos;
         int count = 0;
+        HashMap stEn = new HashMap<Pin, Integer>();
         while (endPinPos != -1) {
             pin = calc(endPinPos);
+            if (stEn.get(pin) == null) {
+                stEn.put(pin, 0);
+            } else {
+                stEn.put(pin, ((int) stEn.get(pin)) + 1);
+            }
             endPinPos = drawFromPin(pin);
-            //endPinPos = drawFromPinBlackest(pin);
             count++;
             //saveMask();
         }
@@ -121,36 +160,15 @@ public class KnitPaint extends Base {
     }
 
 
-    private int drawFromPinBlackest(Pin pin) {
-        int max = 1000;
-        if (usedLines.size() > max) {
-            return -1;
-        }
-        ArrayList<Line> allLines = new ArrayList<>();
-        for (Line l : pin.endPointsbyWeighting.values()) {
-            allLines.add(l);
-        }
-        for (int c = allLines.size() - 1; c > 0; c--) {
-            Line l = (Line) allLines.get(c);
-            if (!usedLines.contains(l)) {
-                drawLine(l);
-                usedLines.add(l);
-                return l.endPin;
-            }
-        }
-        return -1;
-    }
-
     private int drawFromPin(Pin pin) {
 
         ArrayList<Line> allLines = new ArrayList<>();
         for (Line l : pin.endPointsbyWeighting.values()) {
             allLines.add(l);
         }
-        //Collections.reverse(allLines);
         for (int c = allLines.size() - 1; c > 0; c--) {
             Line l = (Line) allLines.get(c);
-            if (l.blackness > wBlacknessMin && l.blackness < wBlacknessMax && !usedLines.contains(l)) {
+            if (l.blackness > wBreakMin && l.blackness < wBreakMax && !usedLines.contains(l)) {
                 //if (l.blackness > pin.remBreak && !usedLines.contains(l)) {
                 drawLine(l);
                 usedLines.add(l);
@@ -162,17 +180,16 @@ public class KnitPaint extends Base {
             int off = (int) (Math.random() < 0.5 ? Math.random() * errorPinOffset : Math.random() * -errorPinOffset);
             int p2 = (pin.pos + off + (int) numPoints) % ((int) numPoints);
             Line l = new Line();
-            wBlacknessMax = wBlacknessMin;
-            wBlacknessMin = wBreakFloor + wBreakDelta * (1 - (errorCount / maxErrors));
+            wBreakMax = wBreakMin;
+            wBreakMin = wBreakFloor + wBreakDelta * (1 - (errorCount / maxErrors));
             l.startPin = pin.pos;
             l.endPin = p2;
             drawLine(l);
             //alphaStart = alphaStart - (alphaStart / (maxErrors * 1.1));
             //ipG.setColor(new Color(255, 255, 255, ((int) (255.0 * (double) alphaStart))));
-            println("errorCount=" + errorCount + " wBlacknessMin=" + wBlacknessMin + " wBlacknessMax=" + wBlacknessMax + " alphaStart=" + alphaStart + " usedLines=" + usedLines.size(), printCoords);
+            println("errorCount=" + errorCount + " wBreakMin=" + wBreakMin + " wBreakMax=" + wBreakMax + " alphaStart=" + alphaStart + " usedLines=" + usedLines.size(), !printCoords);
             return p2;
         }
-        println("No lines", true);
         return -1;
     }
 
@@ -197,17 +214,15 @@ public class KnitPaint extends Base {
         int y2 = (int) yEn;
 
         int used = usedLines.size();
-        println("x1,y1:x2,y2 = " + x1 + "," + y1 + ":" + x2 + "," + y2 + " used:" + used + " err:" + errorCount + " alpha:" + alphaStart + " wBlacknessMin" + wBlacknessMin + " wBlacknessMax:" + wBlacknessMax, !printCoords);
-        println("p1:p2 = " + l.startPin + ":" + l.endPin +", blackness="+l.blackness +" used:"+usedLines.size(), printCoords);
+        println("x1,y1:x2,y2 = " + x1 + "," + y1 + ":" + x2 + "," + y2 + " used:" + used + " err:" + errorCount + " alpha:" + alphaStart + " wBreakMin" + wBreakMin + " wBreakMax:" + wBreakMax, !printCoords);
+        println("p1:p2 = " + l.startPin + ":" + l.endPin, printCoords);
         double alpha = l.blackness;
         //ipG.setStroke(new BasicStroke(strokeMask*(float)(1+alpha)));
-        ipG.setStroke(new BasicStroke(strokeMask));
-        int a = ((int) (255.0 * (double) alpha));
-        a = 255;
-        ipG.setColor(new Color(255, 255, 255, a));
+        //ipG.setStroke(new BasicStroke(strokeMask));
+        //ipG.setColor(new Color(255, 255, 255, ((int) (255.0 * (double) alpha))));
         drawLine(opG, x1, y1, x2, y2);
-        //overlayLine(x1, y1, x2, y2);
-        drawLine(ipG, x1, y1, x2, y2);
+        overlayLine(x1, y1, x2, y2);
+        //drawLine(ipG, x1, y1, x2, y2);
 
         //opG.drawLine(x1, y1, x2, y2);
         //ipG.drawLine(x1, y1, x2, y2);
@@ -330,34 +345,12 @@ public class KnitPaint extends Base {
             int xx = (int) (x1 + dx * s);
             int yy = (int) (y1 + dy * s);
 
-            double importance = 1; //getImportance(xx, yy);
-
             Color col = new Color(ibi.getRGB(xx, yy));
-            double redF = 1;
-            if (impByCol) {
-                redF= 0.25;
-            }
-            double white = ((double) (col.getRed()*redF + col.getGreen() + col.getBlue())) / (redF + 2);
+            double white = ((double) (col.getRed() + col.getGreen() + col.getBlue())) / 3.0;
             white = white / 255.0;
-            white = white * importance;
             totWhite = totWhite + white;
         }
         return 1 - (totWhite / len);
-    }
-
-    private double getImportance(int xx, int yy) {
-        double impF = 0.95;
-        int cx = w/2;
-        int cy = h/2;
-        int cix = 500;
-        int ciy = 500;
-        int radi = w/4;
-        Ellipse2D imp = new Ellipse2D.Double(cix, ciy, radi, radi);
-        if (imp.contains(xx, yy)) {
-            return impF;
-        } else {
-            return 1;
-        }
     }
 
     private void init() throws IOException {

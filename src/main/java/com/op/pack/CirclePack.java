@@ -20,7 +20,7 @@ public class CirclePack extends Base {
 
     private static CirclePack circlePack = new CirclePack();
     //  R.A. Robertson 2012.03 "Circle Packing 3" ~ www.rariora.org ~
-    private String dir = host + "";
+    private String dir = host + "circlePack/";
     private String ipFile = "VirgaCol";
     private String opFile = "CirclePack";
     private int w = 0;
@@ -43,6 +43,8 @@ public class CirclePack extends Base {
     double maxCirclesF = 3;// VirgaCol:3=20 75 1 0 10 0.25; 2= 10 30 0
     private FileWriter writer;
     private boolean innerCircleOnly = false;
+    private boolean doSVG = true;
+    private boolean withSVGFilters = false;
 
     public static void main(String[] args) throws Exception {
         circlePack.run();
@@ -50,12 +52,17 @@ public class CirclePack extends Base {
 
     private void run() throws Exception {
         setup();
-        setupSVG();
+        if (doSVG) {
+            setupSVG();
+        }
 
         drawAll();
 
         save();
-        endSVG();
+
+        if (doSVG) {
+            endSVG();
+        }
     }
 
     private void drawAll() {
@@ -96,21 +103,24 @@ public class CirclePack extends Base {
         writeLine("        viewBox=\"0 0 " + w + " " + h + "\"");
         writeLine("        height=\"" + hh + "mm\"");
         writeLine("        width=\"" + ww + "mm\">");
-        writeLine("  <defs id=\"defs4\">");
-        int i = 2;//0
-        int j = 2;//0
-        int k = -1;//0
-        int l = -1;//0
 
-        //writeOneFilter();
-        writeFilter(0, -0.5, -0.5, 2, 2, 20, bf * 0.02, 17, 1);
-        writeFilter(1, -0.5, -0.5, 2, 2, 25, bf * 0.018, 27, 2);
-        writeFilter(2, -0.5, -0.5, 2, 2, 30, bf * 0.017, 37, 3);
-        writeFilter(3, -0.5, -0.5, 2, 2, 35, bf * 0.0165, 47, 4);
-        writeFilter(4, -0.5, -0.5, 2, 2, 40, bf * 0.016, 57, 5);
-        writeFilter(5, -0.5, -0.5, 2, 2, 45, bf * 0.0155, 67, 6);
-        writeFilter(6, -0.5, -0.5, 2, 2, 50, bf * 0.015, 77, 7);
-        writeLine("  </defs>");
+        if (withSVGFilters) {
+            writeLine("  <defs id=\"defs4\">");
+            int i = 2;//0
+            int j = 2;//0
+            int k = -1;//0
+            int l = -1;//0
+            //writeOneFilter();
+            writeFilter(0, -0.5, -0.5, 2, 2, 20, bf * 0.02, 17, 1);
+            writeFilter(1, -0.5, -0.5, 2, 2, 25, bf * 0.018, 27, 2);
+            writeFilter(2, -0.5, -0.5, 2, 2, 30, bf * 0.017, 37, 3);
+            writeFilter(3, -0.5, -0.5, 2, 2, 35, bf * 0.0165, 47, 4);
+            writeFilter(4, -0.5, -0.5, 2, 2, 40, bf * 0.016, 57, 5);
+            writeFilter(5, -0.5, -0.5, 2, 2, 45, bf * 0.0155, 67, 6);
+            writeFilter(6, -0.5, -0.5, 2, 2, 50, bf * 0.015, 77, 7);
+            writeLine("  </defs>");
+
+        }
         writeLine("  <g id=\"layer1\">");
     }
 
@@ -227,7 +237,9 @@ public class CirclePack extends Base {
             Color col = getAverageColor(x, y, r);
             circleList.add(new Circle(x, y, r));
             drawOne(x, y, rr, col);
-            drawOneSVG(x, y, rr, col);
+            if (doSVG) {
+                drawOneSVG(x, y, rr, col);
+            }
         }
         if (tryCount > 200000) {
             minR = Math.max(2, minR - 1);
@@ -253,16 +265,19 @@ public class CirclePack extends Base {
     private void drawOneSVG(double x, double y, double rr, Color col) {
         int cx = (int) x;
         int cy = (int) y;
-        int r = (int) rr;
 
-        double rf = 1.25;
-        int r2 = (int) (rr * rf);
+        double rf = 1;
+        int r = (int) (rr * rf);
         String color = toHexString(col);
 
         int wfRnd = (int) (Math.random() * 5);
         int wf = (int) (5 * (rr / maxR));
         //wf = 0;
-        writeLine("  	<circle cx=\"" + cx + "\" cy=\"" + cy + "\" r=\"" + (r2) + "\" style=\"fill:" + color + ";filter:url(#filterWatercolor" + wf + ")\" />");
+        String style = "style=\"fill:"+color+"\" stroke=\"none\"";
+        if (withSVGFilters) {
+            style = "style=\"fill:" + color + ";filter:url(#filterWatercolor" + wf + ")\" stroke=\"none\"";
+        }
+        writeLine("  	<circle cx=\"" + cx + "\" cy=\"" + cy + "\" r=\"" + r + "\" "+style+"/>");
     }
 
     private String toHexString(Color colour) throws NullPointerException {

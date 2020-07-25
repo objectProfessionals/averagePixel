@@ -15,17 +15,17 @@ import java.util.ArrayList;
 public class Ishihara extends Base {
 
     private static Ishihara circlePack = new Ishihara();
-    private String ipFile1 = "Solo3";
-    private String ipFile2 = "Leia3";
-    private String dir = host + "ishihara/" + ipFile1 + ipFile2 + "/";
-    private String ipFile12 = ipFile1+ipFile2;
+    private String ipFile1 = "San2";
+    private String ipFile2 = "Vir2";
+    private String folder = "SanVir";
+    private String dir = host + "ishihara/" + folder + "/";
     private String opFile = "Ishihara";
     private int w = 0;
     private int h = 0;
     private double dpi = 254;
+    double brightnessThreshold = 175;
     private BufferedImage ibi1;
     private BufferedImage ibi2;
-    private BufferedImage ibi12;
     private BufferedImage obi;
     private Graphics2D opG;
 
@@ -33,16 +33,16 @@ public class Ishihara extends Base {
     Color ground = Color.WHITE;  // Background color.
     Color fill = Color.BLACK;  // Background color.
     int maxCircles = 0;
-    double minR = 20;
+    double minR = 5;
     double maxR = 40;
+    private int lowestRad = (int)minR;
+    private int maxTryCount = 250;
     double spacer = 0;
     double angInc = 15;
     double strokeF = 0.25;
     double maxCirclesF = 25;// VirgaCol:3=20 75 1 0 10 0.25; 2= 10 30 0
     private boolean innerCircleOnly = true;
     private double bf = 0.05;
-    private int maxTryCount = 100;
-    private int lowestRad = 10;
     private double minRDec = 0.5;
     private double maxRDec = 0.5;
 
@@ -51,9 +51,7 @@ public class Ishihara extends Base {
     }
 
     private void run() throws Exception {
-        setup1();
-        setup2();
-        setupOp();
+        setup();
 
         drawAll();
 
@@ -67,21 +65,15 @@ public class Ishihara extends Base {
     }
 
 
-    void setup1() throws IOException {
+    void setup() throws IOException {
         File ip = new File(dir + ipFile1 + ".jpg");
         ibi1 = ImageIO.read(ip);
-    }
 
-    void setup2() throws IOException {
-        File ip = new File(dir + ipFile2 + ".jpg");
-        ibi2 = ImageIO.read(ip);
-    }
+        File ip2 = new File(dir + ipFile2 + ".jpg");
+        ibi2 = ImageIO.read(ip2);
 
-    void setupOp() throws IOException {
-        File ip = new File(dir + ipFile12 + ".jpg");
-        ibi12 = ImageIO.read(ip);
-        w = ibi12.getWidth();
-        h = ibi12.getHeight();
+        w = ibi1.getWidth();
+        h = ibi1.getHeight();
         maxCircles = (int) (((double) w) * maxCirclesF);
 
         obi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
@@ -132,18 +124,18 @@ public class Ishihara extends Base {
             Color col2 = getAverageColor(x, y, r, ibi2);
             double g1 = (col1.getRed() + col1.getGreen() + col1.getBlue()) / 3;
             double g2 = (col2.getRed() + col2.getGreen() + col2.getBlue()) / 3;
-            double br = 175;
             boolean p1LighterThanp2 = g1 > g2;
             boolean p2LighterThanp1 = g2 > g1;
-            if (g1 > br && g2 > br) {
-                int grey = (int) br + (int) (Math.random() * (250 - br));
-                col = new Color(grey, grey, grey);
+            if (g1 > brightnessThreshold && g2 > brightnessThreshold) {
+                int rb = (int) brightnessThreshold + (int) (Math.random() * (255 - brightnessThreshold));
+                int green = (int) brightnessThreshold + (int) (Math.random() * (255 - brightnessThreshold));
+                col = new Color(rb, green, rb);
                 //System.out.println("grey="+grey);
             } else if (p1LighterThanp2) {
-                double blue = br + (255.0 - (double) br) * ((g1 - g2) / 255);
+                double blue = brightnessThreshold + (255.0 - (double) brightnessThreshold) * ((g1 - g2) / 255);
                 col = new Color((int) g2, (int) g1, (int) blue);
             } else if (p2LighterThanp1) {
-                double blue = br + (255.0 - (double) br) * ((g2 - g1) / 255);
+                double blue = brightnessThreshold + (255.0 - (double) brightnessThreshold) * ((g2 - g1) / 255);
                 col = new Color((int) g2, (int) g1, (int) blue);
 //            } else {
 //                int grey = br + (int)(Math.random()*(250-br));
@@ -156,7 +148,7 @@ public class Ishihara extends Base {
             minR = Math.max(lowestRad, minR - minRDec);
             maxR = Math.max(minR + 1, maxR - maxRDec);
         }
-        System.out.println("hasOnlyGroundColor:" + hasGroundOnlyColor + " numTry:" + numTry + " circles:" + circleList.size() + " tryCount:" + tryCount + " rad:"+rr+" minRad:" + minR + " maxR:" + maxR);
+        System.out.println("hasOnlyGroundColor:" + hasGroundOnlyColor + " numTry:" + numTry + " circles:" + circleList.size() + " tryCount:" + tryCount + " rad:" + rr + " minRad:" + minR + " maxR:" + maxR);
 
         return tryCount;
     }
