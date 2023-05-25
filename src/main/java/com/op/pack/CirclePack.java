@@ -15,14 +15,18 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Random;
 
 public class CirclePack extends Base {
 
     private static CirclePack circlePack = new CirclePack();
     //  R.A. Robertson 2012.03 "Circle Packing 3" ~ www.rariora.org ~
+    private static final String CIRCLE = "CIR";
+    private static final String HEART = "HRT";
+    private String type = HEART;
     private String dir = host + "circlePack/";
-    private String ipFile = "VirgaCol";
-    private String opFile = "CirclePack";
+    private String ipFile = "VirgaColSq2";
+    private String opFile = type + "_CirclePack";
     private int w = 0;
     private int h = 0;
     private double dpi = 300;
@@ -34,17 +38,19 @@ public class CirclePack extends Base {
     Color ground = Color.WHITE;  // Background color.
     Color fill = Color.BLACK;  // Background color.
     int maxCircles = 0;
+    double absMinR = 5;
     double minR = 20;
     double maxR = 75;
     double bf = 1;
-    double spacer = 0;
+    double spacer = 10;
     double angInc = 10;
     double strokeF = 0.25;
-    double maxCirclesF = 3;// VirgaCol:3=20 75 1 0 10 0.25; 2= 10 30 0
+    double maxCirclesF = 0.5;// VirgaCol:3=20 75 1 0 10 0.25; 2= 10 30 0
     private FileWriter writer;
-    private boolean innerCircleOnly = false;
-    private boolean doSVG = true;
+    private boolean innerCircleOnly = true;
+    private boolean doSVG = false;
     private boolean withSVGFilters = false;
+    private Random random = new Random(1);
 
     public static void main(String[] args) throws Exception {
         circlePack.run();
@@ -56,6 +62,7 @@ public class CirclePack extends Base {
             setupSVG();
         }
 
+        //testShape();
         drawAll();
 
         save();
@@ -65,12 +72,203 @@ public class CirclePack extends Base {
         }
     }
 
+    private void testShape() {
+        HeartShape.test(200, 0, 200, 200, opG);
+    }
+
     private void drawAll() {
         for (int i = 0; i < maxCircles; i++) {
             draw(i);
         }
     }
 
+
+    private int draw(int numTry) {
+        int tryCount = 0;
+        double ww = (double) w;
+        double hh = (double) h;
+        boolean hasGroundOnlyColor;
+        double r = minR + random() * maxR;
+        double x = random() * ww;
+        double y = random() * hh;
+        double rr = r + spacer;
+        Shape shape = getShape(x, y, rr);
+        hasGroundOnlyColor = hasOnlyGroundColor(x, y, rr, shape);
+
+        double border = (double) (w) * 0.25;
+        if (innerCircleOnly) {
+            Ellipse2D inner = new Ellipse2D.Double(border, border, w - 2 * border, h - 2 * border);
+            Rectangle2D in = new Rectangle2D.Double(x - rr / 2, y - rr / 2, rr, rr);
+            if (!inner.contains(in)) {
+                hasGroundOnlyColor = false;
+            }
+        }
+        while (!hasGroundOnlyColor && rr > minR) {
+            rr--;
+            shape = getShape(x, y, rr);
+            hasGroundOnlyColor = hasOnlyGroundColor(x, y, rr, shape);
+            tryCount++;
+            //System.out.println("rr"+rr);
+            if (!hasGroundOnlyColor && rr <= minR) {
+                r = minR + random() * maxR;
+                x = random() * ww;
+                y = random() * hh;
+                rr = r + spacer;
+                shape = getShape(x, y, rr);
+                //System.out.println("tryAgain");
+                hasGroundOnlyColor = hasOnlyGroundColor(x, y, rr, shape);
+                if (innerCircleOnly) {
+                    Ellipse2D inner = new Ellipse2D.Double(border, border, w - 2 * border, h - 2 * border);
+                    Rectangle2D in = new Rectangle2D.Double(x - rr / 2, y - rr / 2, rr, rr);
+                    if (!inner.contains(in)) {
+                        hasGroundOnlyColor = false;
+                    }
+                }
+
+            }
+        }
+
+        if (hasGroundOnlyColor) {
+            Color col = getAverageColor(x, y, r, shape);
+            circleList.add(new Circle(x, y, r));
+            drawOne(col, shape);
+            if (doSVG) {
+                drawOneSVG(x, y, rr, col);
+            }
+        }
+        if (tryCount > 200000) {
+            minR = Math.max(absMinR, minR - 1);
+        }
+        System.out.println("hasOnlyGroundColor:" + hasGroundOnlyColor + " numTry:" + numTry + " circles:" + circleList.size() + " tryCount:" + tryCount + " minRad:" + minR);
+
+
+        return tryCount;
+    }
+
+    private double random() {
+        return random.nextDouble();
+    }
+
+    private void drawOne(Color col, Shape shape) {
+        opG.setColor(col);
+        opG.fill(shape);
+
+        opG.setColor(col.darker());
+        opG.setStroke(new BasicStroke((float) (minR * strokeF)));
+        opG.draw(shape);
+    }
+
+    private void drawOneSVG(double x, double y, double rr, Color col) {
+        int cx = (int) x;
+        int cy = (int) y;
+
+        double rf = 1;
+        int r = (int) (rr * rf);
+        String color = toHexString(col);
+
+        int wfRnd = (int) (random() * 5);
+        int wf = (int) (5 * (rr / maxR));
+        //wf = 0;
+        String style = "style=\"fill:"+color+"\" stroke=\"none\"";
+        if (withSVGFilters) {
+            style = "style=\"fill:" + color + ";filter:url(#filterWatercolor" + wf + ")\" stroke=\"none\"";
+        }
+        writeLine("  	<circle cx=\"" + cx + "\" cy=\"" + cy + "\" r=\"" + r + "\" "+style+"/>");
+    }
+
+    private String toHexString(Color colour) throws NullPointerException {
+        String hexColour = Integer.toHexString(colour.getRGB() & 0xffffff);
+        if (hexColour.length() < 6) {
+            hexColour = "000000".substring(0, 6 - hexColour.length()) + hexColour;
+        }
+        return "#" + hexColour;
+    }
+
+    private void writeLine(String str) {
+        try {
+            writer.write(str + System.lineSeparator());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Shape getShape(double x, double y, double rrr) {
+        if (CIRCLE.equals(type)) {
+            return new Ellipse2D.Double((int) (x - rrr), (int) (y - rrr), rrr * 2, rrr * 2);
+        } if (HEART.equals(type)) {
+            double size = 1 * rrr;
+            double off = 0 * rrr;
+            //shaper.getShape(size, , x1-size, y1-size);
+            Shape heart = new HeartShape().getShape(size, 0, x-size, y-size, random()*360);
+            return heart;
+        }
+
+        return null;
+    }
+
+    private Color getAverageColor(double x, double y, double r, Shape shape) {
+        Color aveCol = Color.BLACK;
+        double i = 0;
+        double totR = 0;
+        double totG = 0;
+        double totB = 0;
+        for (double ang = 0; ang < 360; ang = ang + angInc) {
+            for (double rr = 0; rr < r; rr++) {
+                double xx = x + rr * Math.cos(Math.toRadians(ang));
+                double yy = y + rr * Math.sin(Math.toRadians(ang));
+                if (!shape.contains(xx, yy)) {
+                    continue;
+                }
+                if ((int) xx >= w || (int) yy >= h || (int) xx < 0 || (int) yy < 0) {
+                    continue;
+                }
+                int rgb = ibi.getRGB((int) xx, (int) yy);
+                Color c = new Color(rgb);
+                totR = totR + (double) (c.getRed()) / 255.0;
+                totG = totG + (double) (c.getGreen()) / 255.0;
+                totB = totB + (double) (c.getBlue()) / 255.0;
+                i++;
+            }
+        }
+
+
+        aveCol = new Color(getRGB(totR, i), getRGB(totG, i), getRGB(totB, i));
+        return aveCol;
+    }
+
+    private int getRGB(double totR, double i) {
+        return (int) ((totR / i) * 255.0);
+    }
+
+    private boolean hasOnlyGroundColor(double x, double y, double r, Shape shape) {
+        int rgb = obi.getRGB((int) x, (int) y);
+        Color colorTest = new Color(rgb);
+        boolean hasGroundColor = (colorTest.equals(ground));
+        if (!hasGroundColor) {
+            return false;
+        }
+
+        for (double ang = 0; ang < 360; ang = ang + angInc) {
+            for (double rr = 0; rr < r; rr++) {
+                double xx = x + rr * Math.cos(Math.toRadians(ang));
+                double yy = y + rr * Math.sin(Math.toRadians(ang));
+                if (!shape.contains(xx, yy)) {
+                    continue;
+                }
+                if ((int) xx >= w || (int) yy >= h || (int) xx < 0 || (int) yy < 0) {
+                    continue;
+                }
+                rgb = obi.getRGB((int) xx, (int) yy);
+                colorTest = new Color(rgb);
+                hasGroundColor = (colorTest.equals(ground));
+                if (!hasGroundColor) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
 
     void setup() throws IOException {
 
@@ -191,181 +389,8 @@ public class CirclePack extends Base {
 
     }
 
-    int draw(int numTry) {
-        int tryCount = 0;
-        double ww = (double) w;
-        double hh = (double) h;
-        boolean hasGroundOnlyColor;
-        double r = minR + Math.random() * maxR;
-        double x = Math.random() * ww;
-        double y = Math.random() * hh;
-        double rr = r + spacer;
-        hasGroundOnlyColor = hasOnlyGroundColor(x, y, rr);
 
-        double border = (double) (w) * 0.25;
-        if (innerCircleOnly) {
-            Ellipse2D inner = new Ellipse2D.Double(border, border, w - 2 * border, h - 2 * border);
-            Rectangle2D in = new Rectangle2D.Double(x - rr / 2, y - rr / 2, rr, rr);
-            if (!inner.contains(in)) {
-                hasGroundOnlyColor = false;
-            }
-        }
-        while (!hasGroundOnlyColor && rr > minR) {
-            rr--;
-            hasGroundOnlyColor = hasOnlyGroundColor(x, y, rr);
-            tryCount++;
-            //System.out.println("rr"+rr);
-            if (!hasGroundOnlyColor && rr <= minR) {
-                r = minR + Math.random() * maxR;
-                x = Math.random() * ww;
-                y = Math.random() * hh;
-                rr = r + spacer;
-                //System.out.println("tryAgain");
-                hasGroundOnlyColor = hasOnlyGroundColor(x, y, rr);
-                if (innerCircleOnly) {
-                    Ellipse2D inner = new Ellipse2D.Double(border, border, w - 2 * border, h - 2 * border);
-                    Rectangle2D in = new Rectangle2D.Double(x - rr / 2, y - rr / 2, rr, rr);
-                    if (!inner.contains(in)) {
-                        hasGroundOnlyColor = false;
-                    }
-                }
-
-            }
-        }
-
-        if (hasGroundOnlyColor) {
-            Color col = getAverageColor(x, y, r);
-            circleList.add(new Circle(x, y, r));
-            drawOne(x, y, rr, col);
-            if (doSVG) {
-                drawOneSVG(x, y, rr, col);
-            }
-        }
-        if (tryCount > 200000) {
-            minR = Math.max(2, minR - 1);
-        }
-        System.out.println("hasOnlyGroundColor:" + hasGroundOnlyColor + " numTry:" + numTry + " circles:" + circleList.size() + " tryCount:" + tryCount + " minRad:" + minR);
-
-
-        return tryCount;
-    }
-
-    private void drawOne(double x, double y, double rr, Color col) {
-        int rrr = (int) (rr - spacer);
-
-        opG.setColor(col);
-        Shape shape = getShape(x, y, rrr);
-        opG.fill(shape);
-
-        opG.setColor(col.darker());
-        opG.setStroke(new BasicStroke((float) (minR * strokeF)));
-        opG.draw(shape);
-    }
-
-    private void drawOneSVG(double x, double y, double rr, Color col) {
-        int cx = (int) x;
-        int cy = (int) y;
-
-        double rf = 1;
-        int r = (int) (rr * rf);
-        String color = toHexString(col);
-
-        int wfRnd = (int) (Math.random() * 5);
-        int wf = (int) (5 * (rr / maxR));
-        //wf = 0;
-        String style = "style=\"fill:"+color+"\" stroke=\"none\"";
-        if (withSVGFilters) {
-            style = "style=\"fill:" + color + ";filter:url(#filterWatercolor" + wf + ")\" stroke=\"none\"";
-        }
-        writeLine("  	<circle cx=\"" + cx + "\" cy=\"" + cy + "\" r=\"" + r + "\" "+style+"/>");
-    }
-
-    private String toHexString(Color colour) throws NullPointerException {
-        String hexColour = Integer.toHexString(colour.getRGB() & 0xffffff);
-        if (hexColour.length() < 6) {
-            hexColour = "000000".substring(0, 6 - hexColour.length()) + hexColour;
-        }
-        return "#" + hexColour;
-    }
-
-    private void writeLine(String str) {
-        try {
-            writer.write(str + System.lineSeparator());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private Shape getShape(double x, double y, int rrr) {
-        return new Ellipse2D.Double((int) (x - rrr), (int) (y - rrr), rrr * 2, rrr * 2);
-    }
-
-    private Shape getShapeHeart(double x, double y, int rrr) {
-        int size = 9 * rrr / 10;
-        int off = 1 * rrr / 10;
-        Shape heart = new HeartShape().getShape(size, off, (int) x, (int) y);
-        return heart;
-    }
-
-    private Color getAverageColor(double x, double y, double r) {
-        Color aveCol = Color.BLACK;
-        double i = 0;
-        double totR = 0;
-        double totG = 0;
-        double totB = 0;
-        for (double ang = 0; ang < 360; ang = ang + angInc) {
-            for (double rr = 0; rr < r; rr++) {
-                double xx = x + rr * Math.cos(Math.toRadians(ang));
-                double yy = y + rr * Math.sin(Math.toRadians(ang));
-                if ((int) xx >= w || (int) yy >= h || (int) xx < 0 || (int) yy < 0) {
-                    continue;
-                }
-                int rgb = ibi.getRGB((int) xx, (int) yy);
-                Color c = new Color(rgb);
-                totR = totR + (double) (c.getRed()) / 255.0;
-                totG = totG + (double) (c.getGreen()) / 255.0;
-                totB = totB + (double) (c.getBlue()) / 255.0;
-                i++;
-            }
-        }
-
-
-        aveCol = new Color(getRGB(totR, i), getRGB(totG, i), getRGB(totB, i));
-        return aveCol;
-    }
-
-    private int getRGB(double totR, double i) {
-        return (int) ((totR / i) * 255.0);
-    }
-
-    private boolean hasOnlyGroundColor(double x, double y, double r) {
-        int rgb = obi.getRGB((int) x, (int) y);
-        Color colorTest = new Color(rgb);
-        boolean hasGroundColor = (colorTest.equals(ground));
-        if (!hasGroundColor) {
-            return false;
-        }
-
-        for (double ang = 0; ang < 360; ang = ang + angInc) {
-            for (double rr = 0; rr < r; rr++) {
-                double xx = x + rr * Math.cos(Math.toRadians(ang));
-                double yy = y + rr * Math.sin(Math.toRadians(ang));
-                if ((int) xx >= w || (int) yy >= h || (int) xx < 0 || (int) yy < 0) {
-                    continue;
-                }
-                rgb = obi.getRGB((int) xx, (int) yy);
-                colorTest = new Color(rgb);
-                hasGroundColor = (colorTest.equals(ground));
-                if (!hasGroundColor) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-/* ======================= Circle Class ======================= */
+    /* ======================= Circle Class ======================= */
 
     class Circle {
         double x, y, r;

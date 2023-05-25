@@ -26,3 +26,4 @@ hs_err_pid*
 .idea/
 averagePixel.iml
 /.idea/encodings.xml
+/build/tmp/compileJava/source-classes-mapping.txt

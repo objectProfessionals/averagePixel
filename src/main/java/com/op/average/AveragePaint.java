@@ -18,11 +18,11 @@ public class AveragePaint extends Base {
     private static AveragePaint averagePaint = new AveragePaint();
 
     private String dir = host + "average/";
-    private String ipFile = "Virga";
-    private String opFilePre = "Out";
+    private String ipFile = "VirgaColSlimBordered";
     private int w = 0;
     private int h = 0;
-    private Type type = Type.LINE;
+    private Type type = Type.RECT;
+    private String opFilePre = "Out";
     private String opFile = opFilePre + type.name();
 
     private double scale = type.scale;
@@ -47,7 +47,7 @@ public class AveragePaint extends Base {
     }
 
     public void draw() throws IOException {
-        File ip = new File(dir + ipFile + ".jpg");
+        File ip = new File(host + ipFile + ".png");
         BufferedImage bi = ImageIO.read(ip);
         w = bi.getWidth();
         h = bi.getHeight();
@@ -278,7 +278,8 @@ public class AveragePaint extends Base {
         p.lineTo(r, 0);
         AffineTransform tr = new AffineTransform();
         AffineTransform mv = AffineTransform.getTranslateInstance(x, y);
-        double f = ((c.getRed() + c.getBlue() + c.getGreen())/3.0)/255.0;
+        //double f = ((c.getRed() + c.getBlue() + c.getGreen())/3.0)/255.0;
+        double f = (c.getRed())/255.0;
         AffineTransform ro = AffineTransform.getRotateInstance(Math.PI * f, r, r);
         tr.concatenate(mv);
         tr.concatenate(ro);

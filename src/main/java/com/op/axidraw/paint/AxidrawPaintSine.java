@@ -32,6 +32,7 @@ public class AxidrawPaintSine extends AxidrawBase {
     private double deltaAmp = 0;
     private double deltaGreyR = 0;
     private Random random = new Random(1);
+    private double strmm = 0.25;
 
     public static void main(String[] args) throws Exception {
         axidrawPaint.run();
@@ -46,16 +47,16 @@ public class AxidrawPaintSine extends AxidrawBase {
     }
 
     private void drawSVG() {
-        startSVGPath(0, 0, 0);
+        startSVGPath("0", 0, 0);
         corners(1, 1, totW - 1, totH - 1, totW * cornerF);
         rect(0, 0, imageW, imageH);
-        endSVGPath(RED);
+        endSVGPath(RED, strmm*scale);
 
         setup();
 
-        startSVGPath(1, 0, 0);
+        startSVGPath("1", 0, 0);
         drawSines(deltaY);
-        endSVGPath(BLACK);
+        endSVGPath(BLACK, strmm*scale);
     }
 
     private void setup() {
@@ -68,7 +69,7 @@ public class AxidrawPaintSine extends AxidrawBase {
 
     private void drawSines(double yOff) {
         for (double y = yOff; y <= imageH; y = y + deltaY) {
-            dipPaint(0);
+            dipPaint(BLACK);
             drawLine(y);
         }
     }

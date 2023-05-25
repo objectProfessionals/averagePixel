@@ -64,7 +64,7 @@ public class AxidrawBaseOLD extends Base {
                     "xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\">" +
                     " viewBox=\"0 0 " + wmm + " " + hmm + "\"");
             writer.println("<g style=\"display:inline\" inkscape:label=\"1-Layer\" id=\"1-layer\" inkscape:groupmode=\"layer\">");
-            writer.println("<rect width=\"" + wmm + "mm\" height=\"" + hmm + "mm\" style=\"fill:none;stroke-width:3;stroke:rgb(0,0,0)\" />");
+            writer.println("<rect width=\"" + (wmm-1) + "mm\" height=\"" + (hmm-1) + "mm\" style=\"fill:none;stroke-width:3;stroke:rgb(0,0,0)\" />");
             writer.print("</g>");
         }
 
@@ -82,6 +82,14 @@ public class AxidrawBaseOLD extends Base {
         if (!generateSVG) {
             String hex = String.format("#%02x%02x%02x", col.getRed(), col.getGreen(), col.getBlue());
             writer.print("\" style=\"fill:none;stroke:" + hex + "\" />");
+            writer.print("</g>");
+        }
+    }
+
+    protected void endSVGPath(Color col, double width) {
+        if (!generateSVG) {
+            String hex = String.format("#%02x%02x%02x", col.getRed(), col.getGreen(), col.getBlue());
+            writer.print("\" style=\"fill:none;stroke:" + hex + ";stroke-width:"+width+"\" />");
             writer.print("</g>");
         }
     }
